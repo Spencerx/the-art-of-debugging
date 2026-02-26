@@ -54,8 +54,139 @@ export TMPDIR=/tmp/
 in the console you run the python program from.
 
 
+### Printing Object Variables
 
-### auto-print what's being observed
+If you have an object to debug you can't just dump its contents easily. Let's create a simple class with 2 variable - one class and one instance variable, create an object and try to print its contents:
+
+```python
+# print_object_1.py
+class A():
+    foo = 1
+    def __init__(self): self.bar = 2
+
+a = A()
+print(a)
+```
+```bash
+$ python print_object_1.py
+<__main__.A object at 0x1012b9b50>
+```
+This is not very useful as the object appears opaque and `print` can't look inside.
+
+Python has a special `__repr__` method that helps to make object's data print-friendly:
+
+```python
+# print_object_2.py
+class A():
+    foo = 1
+    def __init__(self): self.bar = 2
+    def __repr__(self): return f"{self.foo=}, {self.bar=}"
+
+a = A()
+print(a)
+```
+```bash
+$ python print_object_2.py
+self.foo=1, self.bar=2
+```
+So this is great, but we have to hope the creator of the class provided this helper method.
+
+For example, if the class is wrapped with `@dataclasses.dataclass`, it already comes with a `__repr__` method:
+```python
+# print_object_3.py
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class A():
+    foo: Optional = 1
+    def __init__(self): self.bar = 2
+a = A()
+print(a)
+```
+```bash
+$ python print_object_3.py
+A(foo=1)
+```
+As you can see it only prints the class variables (`foo=1`), the instance variables are missed by its `__repr__` - so this is not helpful.
+
+There is also built-in `vars`, which also has the issue that it shows only the instance member and not the class one:
+
+```python
+# print_object_4.py
+import rich;
+class A():
+    foo = 1
+    def __init__(self): self.bar = 2
+
+a = A()
+from pprint import pprint
+pprint(vars(a))
+```
+```bash
+$ python print_object_4.py
+{'bar': 2}
+```
+
+
+Since we don't always have classes under our control and while we can monkey patch a class, it's at times easier to just use some smart util that can do it automatically for you. For example, `rich` `inspect()` can do it:
+
+```python
+# print_object_5.py
+import rich;
+class A():
+    foo = 1
+    def __init__(self): self.bar = 2
+
+a = A()
+rich.inspect(a)
+```
+```bash
+$ pip install rich
+$ python print_object_5.py
+╭───────── <class '__main__.A'> ─────────╮
+│ ╭────────────────────────────────────╮ │
+│ │ <__main__.A object at 0x1017c7860> │ │
+│ ╰────────────────────────────────────╯ │
+│                                        │
+│ bar = 2                                │
+│ foo = 1                                │
+╰────────────────────────────────────────╯
+```
+
+footnote: I'm looking for a more user-friendly replacement for `rich.inspect()` since it is too opinionated wrt putting borders around all its outputs and this is really a problem for post processing, that's why I avoid using this otherwise handy module.
+
+You can control what attributes are dumped via various args to [`rich.inspect()`](https://rich.readthedocs.io/en/stable/reference/init.html#rich.inspect).
+
+The closest Python built-in way I found is `inspect.getmembers()`, but alas it won't let me filter the variable attributes (but it does let you filter by other types of attributes via a [`predicate` argument](https://docs.python.org/3.13/library/inspect.html#inspect.getmembers)).
+
+```python
+# print_object_6.py
+import rich;
+class A():
+    foo = 1
+    def __init__(self): self.bar = 2
+
+a = A()
+from pprint import pprint as pp
+pp(inspect.getmembers(a))
+```
+```bash
+$ python print_object_6.py
+[('__class__', <class '__main__.A'>),
+ ('__delattr__', <method-wrapper '__delattr__' of A object at 0x104953b90>),
+ ('__dict__', {}),
+ [...] trimmed output
+ ('__weakref__', None),
+ ('bar', 2),
+ ('foo', 1)]
+```
+As you can see it prints the variable attributes, but also a lot of dunder attributes we don't want. Surely we could post process its output to skip `r"__"` matches but that's too much code to write - we want something that is fast to write unless you supplement each code base you debug with your own debug library, which at times is a great option, if you put it on pypi so that it's quick to install.
+
+You may have noticed I used `pprint` in a few code samples - which is another handy built-in library for pretty printing nested lists, dictionaries and other large structures. If I were to just `print` - there would have been one long line of output.
+
+
+### Auto-Print What's Being Observed
 
 Say, you want to see the output of summation:
 
@@ -88,7 +219,7 @@ So once again you can see that atomic operations are ideal for fruitful debuggin
 
 
 
-## Debugging the right Python package
+## Ensuring The Python Package You Edit Is The One That Is Run
 
 If you're modifying a git repository of a Python package and then installing into a virtual environment this could be a very error-prone process since you are never sure if you reinstalled the modified files or not when you test things. And that's why instead of using `pip install .` it's much better to use `pip install -e .` which instead of installing the Python files into the virtual environment, tells the latter to access the files from the git clone (or whatever other way the source code is made available). For example, if you're working on HF transformers, here is how to do it better:
 ```

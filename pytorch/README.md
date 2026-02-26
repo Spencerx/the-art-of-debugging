@@ -737,6 +737,70 @@ tensor([[0.01, 0.29,  ..., 0.02, 0.41],
 
 Visual debuggers like VSCode or PyCharm are excellent at showing tensor's contents and are much easier to navigate and understand than `pdb`, where you have to manually control the visualization. I would often step through to some breakpoint copy-n-paste the contents of a tensor before and after into 2 files and then run a comparison between the 2 to see the differences.
 
+To dump not just the tensor values and possibly a few default attributes (like `device`, and `dtype`), but all of its attributes you can use `rich.inspect`
+
+```bash
+$ python -c "import torch, rich; t = torch.rand(2,3); rich.inspect(t)"
+╭─────────────────────────────────── <class 'torch.Tensor'> ───────────────────────────────────╮
+│ ╭──────────────────────────────────────────────────────────────────────────────────────────╮ │
+│ │ tensor([[0.2276, 0.8454, 0.6496],                                                        │ │
+│ │ │   │   [0.9643, 0.5291, 0.8428]])                                                       │ │
+│ ╰──────────────────────────────────────────────────────────────────────────────────────────╯ │
+│                                                                                              │
+│          data = tensor([[0.2276, 0.8454, 0.6496],                                            │
+│                         [0.9643, 0.5291, 0.8428]])                                           │
+│        device = device(type='cpu')                                                           │
+│         dtype = torch.float32                                                                │
+│          grad = None                                                                         │
+│       grad_fn = None                                                                         │
+│             H = tensor([[0.2276, 0.9643],                                                    │
+│                         [0.8454, 0.5291],                                                    │
+│                         [0.6496, 0.8428]])                                                   │
+│          imag = RuntimeError('imag is not implemented for tensors with non-complex dtypes.') │
+│        is_cpu = True                                                                         │
+│       is_cuda = False                                                                        │
+│        is_ipu = False                                                                        │
+│       is_leaf = True                                                                         │
+│       is_maia = False                                                                        │
+│       is_meta = False                                                                        │
+│     is_mkldnn = False                                                                        │
+│        is_mps = False                                                                        │
+│       is_mtia = False                                                                        │
+│     is_nested = False                                                                        │
+│  is_quantized = False                                                                        │
+│     is_sparse = False                                                                        │
+│ is_sparse_csr = False                                                                        │
+│     is_vulkan = False                                                                        │
+│        is_xla = False                                                                        │
+│        is_xpu = False                                                                        │
+│      itemsize = 4                                                                            │
+│        layout = torch.strided                                                                │
+│            mH = tensor([[0.2276, 0.9643],                                                    │
+│                         [0.8454, 0.5291],                                                    │
+│                         [0.6496, 0.8428]])                                                   │
+│            mT = tensor([[0.2276, 0.9643],                                                    │
+│                         [0.8454, 0.5291],                                                    │
+│                         [0.6496, 0.8428]])                                                   │
+│          name = None                                                                         │
+│         names = (None, None)                                                                 │
+│        nbytes = 24                                                                           │
+│          ndim = 2                                                                            │
+│     output_nr = 0                                                                            │
+│          real = tensor([[0.2276, 0.8454, 0.6496],                                            │
+│                         [0.9643, 0.5291, 0.8428]])                                           │
+│ requires_grad = False                                                                        │
+│  retains_grad = False                                                                        │
+│         shape = torch.Size([2, 3])                                                           │
+│             T = tensor([[0.2276, 0.9643],                                                    │
+│                         [0.8454, 0.5291],                                                    │
+│                         [0.6496, 0.8428]])                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────╯
+
+```
+This allows you to quickly peek inside the tensor object. Except there might be too much information.
+
+
+
 ### Detecting problematic tensor values
 
 #### Inf
